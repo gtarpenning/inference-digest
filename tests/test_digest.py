@@ -112,6 +112,16 @@ class Pages(unittest.TestCase):
         finally:
             collect.fetch = real
 
+    def test_first_sight_of_a_page_reports_only_recent_articles(self):
+        now = datetime(2026, 11, 21, 20, tzinfo=timezone.utc)
+        recent = {"published": "2026-11-20T09:00:00+00:00"}
+        old = {"published": "2026-09-01T00:00:00+00:00"}
+        undated = {"published": None}
+        self.assertTrue(collect.in_window(recent, now, False))
+        self.assertFalse(collect.in_window(old, now, False))
+        self.assertFalse(collect.in_window(undated, now, False))
+        self.assertTrue(collect.in_window(undated, now, True))    # --no-baseline keeps undated ones
+
     def test_hacker_news_pages_through_results(self):
         calls, real = [], collect.fetch
         def fake(url, timeout=30):

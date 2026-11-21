@@ -272,6 +272,12 @@ def wanted(src: dict, it: dict) -> bool:
     return True
 
 
+def in_window(it: dict, now: datetime, keep_undated: bool) -> bool:
+    """Whether an item from a page seen for the first time is news: its article is dated inside the window."""
+    d = parse_date(it.get("published"))
+    return (now - d <= timedelta(hours=MAX_AGE_H)) if d else keep_undated
+
+
 def main():
     global MAX_AGE_H
     ap = argparse.ArgumentParser()
@@ -296,18 +302,20 @@ def main():
             status.append({"source": src["name"], "ok": False, "error": f"{type(e).__name__}: {e}"[:160]})
             print(f"[{i}/{len(sources)}] {src['name']}: FAILED {type(e).__name__}: {e}"[:200], flush=True)
             continue
-        # A source with undated items is baselined on first sight: everything already there is old, not news.
+        # A page without a feed lists months of posts. On first sight only those its articles date inside the
+        # window are news; the rest are recorded as seen. (--no-baseline also keeps the ones with no date.)
         first_time = src["type"] == "links" and src["name"] not in seen["baselined"]
         fresh = [it for it in items if it["key"] not in seen["items"]]
         for it in fresh:
             seen["items"][it["key"]] = args.date
+            it["first_sight"] = first_time
         if first_time:
             seen["baselined"].append(src["name"])
-            fresh = [] if not args.no_baseline else fresh
         new += fresh
         status.append({"source": src["name"], "ok": True, "found": len(items), "new": len(fresh)})
         print(f"[{i}/{len(sources)}] {src['name']}: {len(items)} in window, {len(fresh)} new"
-              f"{' (baseline)' if first_time else ''} ({time.time() - t0:.1f}s)", flush=True)
+              f"{' (first sight: reported only if dated inside the window)' if first_time else ''}"
+              f" ({time.time() - t0:.1f}s)", flush=True)
 
     # Undated pages give a title only: fetch the article so the editor has something to quote, and its date.
     def fill(it):
@@ -323,10 +331,11 @@ def main():
     no_fetch = {"Hacker News"} | {s["name"] for s in sources if s.get("link_template")}   # GitHub refuses the sandbox
     with ThreadPoolExecutor(8) as pool:
         list(pool.map(fill, [it for it in new if not it["text"] and it["source"] not in no_fetch]))
-    if args.no_baseline:   # pages list months of posts: keep only those dated inside the window, and undated ones
-        old = [it for it in new if it["published"] and now - parse_date(it["published"]) > timedelta(hours=MAX_AGE_H)]
-        new = [it for it in new if it not in old]
-        print(f"  {len(old)} items dated before the window dropped", flush=True)
+    before = len(new)
+    new = [it for it in new if not it.pop("first_sight") or in_window(it, now, args.no_baseline)]
+    if len(new) < before:
+        print(f"  {before - len(new)} items already on pages seen for the first time, and not dated inside the "
+              f"window, recorded as seen", flush=True)
 
     # One story, one candidate: the same post often arrives from two sources.
     by_key, out = {}, []

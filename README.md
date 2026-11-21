@@ -25,7 +25,8 @@ word-for-word quote, and a link to the source.
 - **Edit `preferences.md`** for standing rules about what counts as noteworthy.
 - **Edit `sources.json`** to add or drop a source. `feed` is RSS or Atom (GitHub releases have one at
   `github.com/<owner>/<repo>/releases.atom`). `links` is a page with no feed: every link matching `pattern`
-  is an item, and the first run records what is already there without reporting it. `hn` is Hacker News
+  is an item. On a page's first visit, the posts already listed are reported only if their own
+  pages date them inside the window; the rest are recorded as seen. `hn` is Hacker News
   stories above `min_points`.
 - **Filters.** Busy sources take `match_title` (a regex the title must match) or `match` (a regex the title or
   the first 3,000 characters of text must match). Both are case-insensitive. `"@name"` refers to a regex in
