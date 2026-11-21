@@ -88,6 +88,46 @@ class Filters(unittest.TestCase):
         self.assertFalse(collect.wanted(b, {"title": "Nothing", "text": "x" * 3001 + "FP4"}))
 
 
+class Pages(unittest.TestCase):
+    def test_page_date_from_meta_json_ld_or_time(self):
+        self.assertEqual(collect.page_date('<meta content="2026-11-19T08:00:00Z" property="article:published_time">'),
+                         datetime(2026, 11, 19, 8, tzinfo=timezone.utc))
+        self.assertEqual(collect.page_date('<script>{"@type":"BlogPosting","datePublished":"2026-11-18"}</script>'),
+                         datetime(2026, 11, 18, tzinfo=timezone.utc))
+        self.assertEqual(collect.page_date('<p>Posted <time datetime="2026-11-17">Nov 17</time></p>'),
+                         datetime(2026, 11, 17, tzinfo=timezone.utc))
+        self.assertIsNone(collect.page_date("<p>No date here</p>"))
+
+    def test_links_from_anchors_and_from_embedded_json(self):
+        src = {"name": "B", "url": "https://www.example.com/blog", "pattern": r"^https://www\.example\.com/blog/[a-z0-9-]+/?$"}
+        real = collect.fetch
+        try:
+            collect.fetch = lambda url, timeout=30: (b"<a href='/blog/fast-decode'>Fast <b>decode</b></a>"
+                                                     b'<a href="/about">About</a>')
+            (it,) = collect.from_links(src, None)
+            self.assertEqual((it["url"], it["title"]), ("https://www.example.com/blog/fast-decode", "Fast decode"))
+            collect.fetch = lambda url, timeout=30: b'<script>{"posts":[{"href":"/blog/kv-tiering"},{"href":"/pricing"}]}</script>'
+            (it,) = collect.from_links(src, None)
+            self.assertEqual((it["url"], it["title"]), ("https://www.example.com/blog/kv-tiering", "kv tiering"))
+        finally:
+            collect.fetch = real
+
+    def test_hacker_news_pages_through_results(self):
+        calls, real = [], collect.fetch
+        def fake(url, timeout=30):
+            page = int(collect.urllib.parse.parse_qs(collect.urllib.parse.urlsplit(url).query)["page"][0])
+            calls.append(page)
+            hits = [{"objectID": f"{page}{i}", "title": "t", "points": 50, "created_at": "2026-11-20T00:00:00Z"} for i in range(2)]
+            return json.dumps({"hits": hits, "nbPages": 3}).encode()
+        try:
+            collect.fetch = fake
+            items = collect.from_hn({"name": "Hacker News", "min_points": 30}, datetime(2026, 11, 21, tzinfo=timezone.utc))
+        finally:
+            collect.fetch = real
+        self.assertEqual(calls, [0, 1, 2])
+        self.assertEqual(len(items), 6)
+
+
 class Verify(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())

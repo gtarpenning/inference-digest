@@ -20,6 +20,7 @@ import time
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html.parser import HTMLParser
@@ -28,7 +29,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
-MAX_AGE_H = 72          # dated items older than this are ignored
+MAX_AGE_H = 72          # dated items older than this are ignored (--max-age-hours, or a source's max_age_hours)
 TEXT_CAP = 12000        # characters of article text kept per item
 EXCERPT = 400
 KEEP_DAYS = 7           # candidates and texts older than this are pruned from the working tree
@@ -130,7 +131,7 @@ def parse_feed(raw: bytes) -> list[dict]:
         for c in el:
             name, text = _local(c.tag), (c.text or "").strip()
             if name == "title":
-                f["title"] = to_text(text)
+                f["title"] = " ".join(to_text(text).split())   # arXiv wraps long titles across lines
             elif name == "link":
                 href = c.attrib.get("href")
                 if href and c.attrib.get("rel", "alternate") == "alternate":
@@ -139,7 +140,7 @@ def parse_feed(raw: bytes) -> list[dict]:
                     f["url"] = text
             elif name in ("pubdate", "published", "date") or (name == "updated" and not f["published"]):
                 f["published"] = parse_date(text) or f["published"]
-            elif name in ("creator", "author"):
+            elif name in ("creator", "author") and not f["author"]:   # first author of several
                 f["author"] = text or " ".join((x.text or "").strip() for x in c if _local(x.tag) == "name")
             elif name in ("encoded", "content", "description", "summary") and len(text) > len(best):
                 best = text
@@ -149,10 +150,14 @@ def parse_feed(raw: bytes) -> list[dict]:
     return out
 
 
+def max_age(src) -> timedelta:
+    return timedelta(hours=max(src.get("max_age_hours", 0), MAX_AGE_H))
+
+
 def from_feed(src, now):
     items = []
     for f in parse_feed(fetch(src["url"])):
-        if f["published"] and now - f["published"] > timedelta(hours=MAX_AGE_H):
+        if f["published"] and now - f["published"] > max_age(src):
             continue
         text = to_text(f["html"]) if f["html"] else ""
         items.append({"key": canon(f["url"]), "source": src["name"], "title": f["title"], "url": f["url"],
@@ -162,10 +167,16 @@ def from_feed(src, now):
 
 
 def from_hn(src, now):
-    since = int((now - timedelta(hours=MAX_AGE_H)).timestamp())
-    q = urllib.parse.urlencode({"tags": "story", "hitsPerPage": 300,
-                                "numericFilters": f"created_at_i>{since},points>={src.get('min_points', 40)}"})
-    hits = json.loads(fetch("https://hn.algolia.com/api/v1/search_by_date?" + q))["hits"]
+    """Every story above min_points in the window. Three days of them is several hundred, so page through."""
+    since = int((now - max_age(src)).timestamp())
+    hits = []
+    for page in range(10):
+        q = urllib.parse.urlencode({"tags": "story", "hitsPerPage": 1000, "page": page,
+                                    "numericFilters": f"created_at_i>{since},points>={src.get('min_points', 40)}"})
+        res = json.loads(fetch("https://hn.algolia.com/api/v1/search_by_date?" + q))
+        hits += res["hits"]
+        if page + 1 >= res.get("nbPages", 1):
+            break
     items = []
     for h in hits:
         title = h.get("title") or ""
@@ -177,18 +188,49 @@ def from_hn(src, now):
 
 
 def from_links(src, now):
-    """Pages with no feed: every link matching the pattern is an item. No dates, so 'new' means unseen."""
+    """Pages with no feed: every link matching the pattern is an item. No dates, so 'new' means unseen; the
+    article's own date is read from its page later. Pages rendered by JavaScript often carry their links only in
+    embedded JSON, so when no <a> tag matches, any URL or path in the page that fits the pattern counts."""
     page = fetch(src["url"]).decode("utf-8", "replace")
     pat, seen, items = re.compile(src["pattern"]), set(), []
-    for m in re.finditer(r'<a\b[^>]*?href="([^"#?]+)[^"]*"[^>]*>(.*?)</a>', page, re.S | re.I):
-        url = urllib.parse.urljoin(src["url"], html.unescape(m.group(1)))
+
+    def add(href, label):
+        url = urllib.parse.urljoin(src["url"], html.unescape(href))
         if not pat.match(url) or canon(url) in seen:
-            continue
+            return
         seen.add(canon(url))
-        title = to_text(m.group(2)).replace("\n", " · ")[:200]
-        items.append({"key": canon(url), "source": src["name"], "title": title or url.rstrip("/").rsplit("/", 1)[-1],
+        title = to_text(label).replace("\n", " · ")[:200] if label else ""
+        slug = url.rstrip("/").rsplit("/", 1)[-1].replace("-", " ")
+        items.append({"key": canon(url), "source": src["name"], "title": title or slug,
                       "url": url, "author": "", "published": None, "score": None, "comments_url": None, "text": ""})
+
+    for m in re.finditer(r"""<a\b[^>]*?href=["']([^"'#?]+)[^"']*["'][^>]*>(.*?)</a>""", page, re.S | re.I):
+        add(m.group(1), m.group(2))
+    if not items:
+        for m in re.finditer(r"""(https?://[^\s"'<>\\]+|(?<=["'])/[A-Za-z0-9][^\s"'<>\\#?]*)""", page):
+            add(m.group(1), "")
     return items
+
+
+_META = re.compile(r"<meta\b[^>]*>", re.I)
+_ATTR = re.compile(r"""([\w:.-]+)\s*=\s*["']([^"']*)["']""")
+_DATE_KEYS = {"article:published_time", "og:published_time", "datepublished", "date", "pubdate", "publish-date",
+              "publish_date", "parsely-pub-date", "dc.date", "dc.date.issued", "citation_publication_date",
+              "sailthru.date"}
+
+
+def page_date(markup: str):
+    """When an article page says it was published, from its meta tags, JSON-LD or first <time>. None if unsure."""
+    for tag in _META.findall(markup):
+        a = {k.lower(): v for k, v in _ATTR.findall(tag)}
+        key = (a.get("property") or a.get("name") or a.get("itemprop") or "").lower()
+        if key in _DATE_KEYS and parse_date(a.get("content")):
+            return parse_date(a.get("content"))
+    m = re.search(r'"datePublished"\s*:\s*"([^"]+)"', markup)
+    if m and parse_date(m.group(1)):
+        return parse_date(m.group(1))
+    m = re.search(r"""<time\b[^>]*datetime=["']([^"']+)["']""", markup, re.I)
+    return parse_date(m.group(1)) if m else None
 
 
 FETCHERS = {"feed": from_feed, "hn": from_hn, "links": from_links}
@@ -219,10 +261,15 @@ def wanted(src: dict, it: dict) -> bool:
 
 
 def main():
+    global MAX_AGE_H
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", default=datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     ap.add_argument("--dry-run", action="store_true", help="print what would be written; change nothing")
+    ap.add_argument("--max-age-hours", type=int, default=MAX_AGE_H, help="look back this far (default 72)")
+    ap.add_argument("--no-baseline", action="store_true",
+                    help="report what pages without feeds already list, if their articles are dated inside the window")
     args = ap.parse_args()
+    MAX_AGE_H = args.max_age_hours
     now = datetime.now(timezone.utc)
     sources = load_sources(ROOT / "sources.json")
     seen_p = DATA / "seen.json"
@@ -244,19 +291,29 @@ def main():
             seen["items"][it["key"]] = args.date
         if first_time:
             seen["baselined"].append(src["name"])
-            fresh = []
+            fresh = [] if not args.no_baseline else fresh
         new += fresh
         status.append({"source": src["name"], "ok": True, "found": len(items), "new": len(fresh)})
         print(f"[{i}/{len(sources)}] {src['name']}: {len(items)} in window, {len(fresh)} new"
               f"{' (baseline)' if first_time else ''} ({time.time() - t0:.1f}s)", flush=True)
 
-    # Undated pages give a title only: fetch the article so the editor has something to quote.
-    for it in new:
-        if not it["text"] and it["source"] != "Hacker News":
-            try:
-                it["text"] = to_text(fetch(it["url"]).decode("utf-8", "replace"))
-            except Exception as e:
-                print(f"  text fetch failed for {it['url']}: {e}"[:160], flush=True)
+    # Undated pages give a title only: fetch the article so the editor has something to quote, and its date.
+    def fill(it):
+        try:
+            page = fetch(it["url"]).decode("utf-8", "replace")
+        except Exception as e:
+            print(f"  text fetch failed for {it['url']}: {e}"[:160], flush=True)
+            return
+        it["text"] = to_text(page)
+        if not it["published"]:
+            d = page_date(page)
+            it["published"] = d.isoformat() if d else None
+    with ThreadPoolExecutor(8) as pool:
+        list(pool.map(fill, [it for it in new if not it["text"] and it["source"] != "Hacker News"]))
+    if args.no_baseline:   # pages list months of posts: keep only those dated inside the window, and undated ones
+        old = [it for it in new if it["published"] and now - parse_date(it["published"]) > timedelta(hours=MAX_AGE_H)]
+        new = [it for it in new if it not in old]
+        print(f"  {len(old)} items dated before the window dropped", flush=True)
 
     # One story, one candidate: the same post often arrives from two sources.
     by_key, out = {}, []
