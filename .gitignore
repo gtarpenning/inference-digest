@@ -1,0 +1,6 @@
+work/
+data/texts/
+data/candidates/
+__pycache__/
+*.pyc
+.DS_Store

@@ -1,0 +1,37 @@
+{
+ "filters": {
+  "inference_title": "\\b(inferenc\\w*|serv(e|es|ing)|vLLM|SGLang|TensorRT|TRT-LLM|Dynamo|NIM|llama\\.cpp|llm-d|LMCache|FlashAttention|FlashInfer|FlashMLA|ThunderKittens|Helion|Triton|CUTLASS|CuTe|kernels?|megakernels?|speculative|EAGLE|MTP|multi-token|KV[- ]?cache|prefix[- ]cach\\w*|attention|MLA|disaggregat\\w*|prefill|decod\\w*|quantiz\\w*|FP4|NVFP4|MXFP4|FP8|INT4|INT8|low[- ]bit|\\d-bit|sparsit\\w*|sparse|MoE|mixture[- ]of[- ]experts|expert parallel\\w*|parallelism|batch\\w*|throughput|latency|tokens?/s\\w*|tok/s|tokens? per second|TTFT|cost per (million )?tokens?|compil\\w*|CUDA|ROCm|Blackwell|Rubin|GB200|GB300|NVL72|TPU|Trainium|day[- ]0|speedups?|faster|efficien\\w*|optimi[sz]\\w*)\\b",
+  "hn_title": "\\b(inferenc\\w*|LLM serving|serving (LLMs?|models?)|vLLM|SGLang|TensorRT|TRT-LLM|llama\\.cpp|llm-d|LMCache|Ollama|MLX|FlashAttention|FlashInfer|FlashMLA|ThunderKittens|speculative decoding|KV[- ]?cache|prefix caching|PagedAttention|disaggregated|prefill|quantiz\\w*|NVFP4|MXFP4|FP4|FP8|GGUF|mixture[- ]of[- ]experts|MoE|tokens?/s(ec)?|tok/s|tokens per second|cost per token|CUDA kernels?|GPU kernels?|attention kernels?|megakernels?|Groq|Cerebras|Etched|TPUs?|Trainium|Blackwell|Vera Rubin)\\b",
+  "arxiv_title": "^(?!.*\\b(Bayesian|causal|variational|statistical|approximate) inference\\b)(?=.*\\b(LLMs?|large language models?|language models?|transformers?|MoE|mixture[- ]of[- ]experts|attention|tokens?|KV|decod\\w*|speculative|serving|inference)\\b)(?=.*\\b(serving|serve|inference|speculative|draft|KV[- ]?cache|caching|prefill|decod\\w*|quantiz\\w*|FP4|FP8|INT4|low[- ]bit|\\d-bit|kernels?|FlashAttention|sparse|sparsit\\w*|disaggregat\\w*|expert parallel\\w*|parallelism|offload\\w*|throughput|latency|accelerat\\w*|speed\\w*|efficient|efficiency|batch\\w*|schedul\\w*|memory[- ]efficient|memory bandwidth|HBM|compress\\w*|pruning|GPUs?|TPUs?|hardware|cost)\\b)",
+  "minor_release": "(^|\\s)v?\\d+\\.\\d+(\\.0)?$"
+ },
+ "sources": [
+  {"name": "vLLM Blog", "type": "feed", "url": "https://vllm.ai/blog/rss.xml"},
+  {"name": "LMSYS / SGLang", "type": "links", "url": "https://www.lmsys.org/blog", "pattern": "^https://(www\\.)?lmsys\\.org/blog/20\\d\\d-\\d\\d-\\d\\d-[a-z0-9-]+/?$"},
+  {"name": "llm-d", "type": "feed", "url": "https://llm-d.ai/blog/rss.xml"},
+  {"name": "LMCache", "type": "links", "url": "https://blog.lmcache.ai/", "pattern": "^https://blog\\.lmcache\\.ai/en/20\\d\\d/\\d\\d/\\d\\d/[a-z0-9-]+/?$"},
+  {"name": "PyTorch", "type": "feed", "url": "https://pytorch.org/feed/", "match_title": "@inference_title"},
+  {"name": "Hugging Face", "type": "feed", "url": "https://huggingface.co/blog/feed.xml", "match_title": "@inference_title"},
+  {"name": "NVIDIA Technical Blog", "type": "feed", "url": "https://developer.nvidia.com/blog/feed/", "match_title": "@inference_title"},
+  {"name": "Baseten", "type": "links", "url": "https://www.baseten.co/blog/", "pattern": "^https://www\\.baseten\\.co/blog/[a-z0-9-]+/?$"},
+  {"name": "Fireworks AI", "type": "links", "url": "https://fireworks.ai/blog", "pattern": "^https://fireworks\\.ai/(blog|research)/[a-z0-9-]+/?$"},
+  {"name": "Together AI", "type": "links", "url": "https://www.together.ai/blog", "pattern": "^https://www\\.together\\.ai/blog/[a-z0-9-]+/?$"},
+  {"name": "Modal", "type": "links", "url": "https://modal.com/blog", "pattern": "^https://modal\\.com/blog/[a-z0-9-]+/?$"},
+  {"name": "Hazy Research", "type": "links", "url": "https://hazyresearch.stanford.edu/blog", "pattern": "^https://hazyresearch\\.stanford\\.edu/blog/20\\d\\d-\\d\\d-\\d\\d-[a-z0-9-]+/?$"},
+  {"name": "Thinking Machines", "type": "links", "url": "https://thinkingmachines.ai/blog/", "pattern": "^https://thinkingmachines\\.ai/blog/[a-z0-9-]+/?$"},
+  {"name": "Anthropic Engineering", "type": "links", "url": "https://www.anthropic.com/engineering", "pattern": "^https://www\\.anthropic\\.com/(engineering|research)/[a-z0-9-]+$"},
+  {"name": "OpenAI", "type": "feed", "url": "https://openai.com/news/rss.xml", "match_title": "@inference_title"},
+  {"name": "Google DeepMind", "type": "feed", "url": "https://deepmind.google/blog/rss.xml", "match_title": "@inference_title"},
+  {"name": "Google Research", "type": "feed", "url": "https://research.google/blog/rss/", "match_title": "@inference_title"},
+  {"name": "Meta Engineering", "type": "feed", "url": "https://engineering.fb.com/feed/", "match_title": "@inference_title"},
+  {"name": "DeepSeek", "type": "links", "url": "https://api-docs.deepseek.com/", "pattern": "^https://api-docs\\.deepseek\\.com/news/news\\d+/?$"},
+  {"name": "SemiAnalysis", "type": "feed", "url": "https://newsletter.semianalysis.com/feed"},
+  {"name": "arXiv", "type": "feed", "url": "https://rss.arxiv.org/rss/cs.DC+cs.LG+cs.CL+cs.AR+cs.PF+cs.OS", "match_title": "@arxiv_title"},
+  {"name": "Hacker News", "type": "hn", "min_points": 30, "match_title": "@hn_title"},
+  {"name": "vLLM releases", "type": "feed", "url": "https://github.com/vllm-project/vllm/releases.atom", "match_title": "@minor_release"},
+  {"name": "SGLang releases", "type": "feed", "url": "https://github.com/sgl-project/sglang/releases.atom", "match_title": "@minor_release"},
+  {"name": "TensorRT-LLM releases", "type": "feed", "url": "https://github.com/NVIDIA/TensorRT-LLM/releases.atom", "match_title": "@minor_release"},
+  {"name": "Dynamo releases", "type": "feed", "url": "https://github.com/ai-dynamo/dynamo/releases.atom", "match_title": "@minor_release"},
+  {"name": "FlashInfer releases", "type": "feed", "url": "https://github.com/flashinfer-ai/flashinfer/releases.atom", "match_title": "@minor_release"}
+ ]
+}
