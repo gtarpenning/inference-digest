@@ -17,6 +17,7 @@ import json
 import re
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -45,10 +46,16 @@ def fetch(url: str, timeout: int = 30) -> bytes:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 raw = r.read(8_000_000)
             return gzip.decompress(raw) if raw[:2] == b"\x1f\x8b" else raw   # some servers gzip unasked
+        except urllib.error.HTTPError as e:   # a refusal (403, 404) will not change on retry; overload might
+            if attempt == 3 or (e.code < 500 and e.code not in (408, 429)):
+                raise
+        except urllib.error.URLError as e:    # the sandbox proxy refusing a host is policy, not a glitch
+            if attempt == 3 or re.search(r"\b40[37]\b", str(e.reason)):
+                raise
         except Exception:
             if attempt == 3:
                 raise
-            time.sleep(2 * attempt)
+        time.sleep(2 * attempt)
 
 
 class _Text(HTMLParser):
@@ -160,7 +167,12 @@ def from_feed(src, now):
         if f["published"] and now - f["published"] > max_age(src):
             continue
         text = to_text(f["html"]) if f["html"] else ""
-        items.append({"key": canon(f["url"]), "source": src["name"], "title": f["title"], "url": f["url"],
+        url, title = f["url"], f["title"]
+        if src.get("link_template"):   # e.g. a PyPI release, linked to its GitHub release notes instead
+            url = src["link_template"].format(title=f["title"])
+            title = src.get("title_template", "{title}").format(title=f["title"])
+            text = ""                  # PyPI gives only the package's one-line summary
+        items.append({"key": canon(url), "source": src["name"], "title": title, "url": url,
                       "author": f["author"], "published": f["published"].isoformat() if f["published"] else None,
                       "score": None, "comments_url": None, "text": text})
     return items
@@ -308,8 +320,9 @@ def main():
         if not it["published"]:
             d = page_date(page)
             it["published"] = d.isoformat() if d else None
+    no_fetch = {"Hacker News"} | {s["name"] for s in sources if s.get("link_template")}   # GitHub refuses the sandbox
     with ThreadPoolExecutor(8) as pool:
-        list(pool.map(fill, [it for it in new if not it["text"] and it["source"] != "Hacker News"]))
+        list(pool.map(fill, [it for it in new if not it["text"] and it["source"] not in no_fetch]))
     if args.no_baseline:   # pages list months of posts: keep only those dated inside the window, and undated ones
         old = [it for it in new if it["published"] and now - parse_date(it["published"]) > timedelta(hours=MAX_AGE_H)]
         new = [it for it in new if it not in old]

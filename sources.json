@@ -29,10 +29,10 @@
   {"name": "arXiv", "type": "feed", "url": "https://rss.arxiv.org/rss/cs.DC+cs.LG+cs.CL+cs.AR+cs.PF+cs.OS", "match_title": "@arxiv_title"},
   {"name": "arXiv search", "type": "feed", "url": "https://export.arxiv.org/api/query?search_query=%28cat%3Acs.DC+OR+cat%3Acs.LG+OR+cat%3Acs.CL+OR+cat%3Acs.AR+OR+cat%3Acs.PF+OR+cat%3Acs.OS%29+AND+%28ti%3Ainference+OR+ti%3Aserving+OR+ti%3Aspeculative+OR+ti%3Adecoding+OR+ti%3A%22KV+cache%22+OR+ti%3Aquantization+OR+ti%3Akernel+OR+ti%3Aprefill+OR+ti%3Athroughput+OR+ti%3Alatency+OR+ti%3Adisaggregated%29&sortBy=submittedDate&sortOrder=descending&max_results=600", "match_title": "@arxiv_title", "max_age_hours": 168},
   {"name": "Hacker News", "type": "hn", "min_points": 30, "match_title": "@hn_title"},
-  {"name": "vLLM releases", "type": "feed", "url": "https://github.com/vllm-project/vllm/releases.atom", "match_title": "@minor_release"},
-  {"name": "SGLang releases", "type": "feed", "url": "https://github.com/sgl-project/sglang/releases.atom", "match_title": "@minor_release"},
-  {"name": "TensorRT-LLM releases", "type": "feed", "url": "https://github.com/NVIDIA/TensorRT-LLM/releases.atom", "match_title": "@minor_release"},
-  {"name": "Dynamo releases", "type": "feed", "url": "https://github.com/ai-dynamo/dynamo/releases.atom", "match_title": "@minor_release"},
-  {"name": "FlashInfer releases", "type": "feed", "url": "https://github.com/flashinfer-ai/flashinfer/releases.atom", "match_title": "@minor_release"}
+  {"name": "vLLM releases", "type": "feed", "url": "https://pypi.org/rss/project/vllm/releases.xml", "match_title": "@minor_release", "max_age_hours": 168, "link_template": "https://github.com/vllm-project/vllm/releases/tag/v{title}", "title_template": "vLLM {title}"},
+  {"name": "SGLang releases", "type": "feed", "url": "https://pypi.org/rss/project/sglang/releases.xml", "match_title": "@minor_release", "max_age_hours": 168, "link_template": "https://github.com/sgl-project/sglang/releases/tag/v{title}", "title_template": "SGLang {title}"},
+  {"name": "TensorRT-LLM releases", "type": "feed", "url": "https://pypi.org/rss/project/tensorrt-llm/releases.xml", "match_title": "@minor_release", "max_age_hours": 168, "link_template": "https://github.com/NVIDIA/TensorRT-LLM/releases/tag/v{title}", "title_template": "TensorRT-LLM {title}"},
+  {"name": "Dynamo releases", "type": "feed", "url": "https://pypi.org/rss/project/ai-dynamo/releases.xml", "match_title": "@minor_release", "max_age_hours": 168, "link_template": "https://github.com/ai-dynamo/dynamo/releases/tag/v{title}", "title_template": "Dynamo {title}"},
+  {"name": "FlashInfer releases", "type": "feed", "url": "https://pypi.org/rss/project/flashinfer-python/releases.xml", "match_title": "@minor_release", "max_age_hours": 168, "link_template": "https://github.com/flashinfer-ai/flashinfer/releases/tag/v{title}", "title_template": "FlashInfer {title}"}
  ]
 }
