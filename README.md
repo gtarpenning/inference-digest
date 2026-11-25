@@ -18,19 +18,16 @@ word-for-word quote, and a link to the source.
 4. **Send.** `digest/render.py` builds the email and the routine sends it through Gmail. With no items, nothing
    is sent.
 
-## The scheduled task: one, and Claude owns it
+## The scheduled task: one, and Claude manages it from Claude Code
 
-Exactly one scheduled task runs this digest: **Inference Digest V3** (`trig_01BpVVpZyUx1WZVEqEHgwzBi`),
-daily at 5:43am Pacific. Claude created it and manages it. `CLAUDE.md` has its full prompt.
+Exactly one scheduled task runs this digest. Claude creates and changes it from a **Claude Code** session,
+which can choose the task's environment. `CLAUDE.md` has the details and the prompt.
 
-- **Never create another one by hand**, not on the claude.ai routines page, not through the HTTP API, not from
-  a script. Claude can only edit or delete scheduled tasks it created itself, so a hand-made task is one
-  Claude cannot fix, and two tasks running at once send two emails and race to push `data/seen.json`.
-- **To change the schedule, the prompt, the model, or anything in this repo, ask Claude.**
-- **One exception: readers.** Claude is not allowed to add an outside email address on its own. To add or
-  remove a reader, edit the numbered reader list inside that same task's prompt at
-  `https://claude.ai/code/routines/trig_01BpVVpZyUx1WZVEqEHgwzBi`. Edit it; never copy or recreate it.
-- Reader addresses live only in the task's prompt, never in this repo: the repo is public.
+- **Not from the claude.ai chat app.** Tasks created there run in an environment whose network blocks the
+  source hosts: 23 of 28 sources fail and the footer lists them under "Not checked today". The chat app also
+  cannot edit tasks created from Claude Code. Exa cannot stand in for the feeds (it rejects RSS).
+- **Never two at once.** Two tasks send two emails and race to push `data/seen.json`.
+- **Readers live only in the task's prompt**, never in this repo: the repo is public.
 
 ## Steering it
 

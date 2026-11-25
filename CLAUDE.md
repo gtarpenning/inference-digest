@@ -5,36 +5,30 @@ the owner asks Claude to change the digest itself.
 
 ## The scheduled task
 
-Exactly one scheduled task runs this digest, and Claude owns it:
+Exactly one scheduled task runs this digest. Manage it only from a Claude Code session, never from the
+claude.ai chat app.
 
-- Name: **Inference Digest V3**
-- ID: `trig_01BpVVpZyUx1WZVEqEHgwzBi`
+- Current task: **Inference Digest V2** (`trig_01RSoL2RhvZJmQXXKzH7c6ba`), created through the API from Claude
+  Code, in an environment whose network reaches the sources. If you replace it, update this line.
 - Schedule: `CRON_TZ=America/Los_Angeles 43 5 * * *` (daily, 5:43am Pacific)
 - Connectors it uses: Gmail (reading past digests, sending) and Exa (search and fetch)
 
 Rules:
 
-1. **Update, never duplicate.** Before touching scheduling, run `list_triggers`. Change the schedule, prompt or
-   model of the task above with `update_trigger`. Never call `create_trigger` for this digest while that task
-   exists.
-2. **Hand-made tasks are a bug.** If `list_triggers` shows any other inference digest task (especially one with
-   `created_via: http_api`, which Claude cannot edit or disable), tell the owner to delete it at
-   `https://claude.ai/code/routines/<its id>`. Two tasks at once send two emails and race on `data/seen.json`.
-3. **Readers.** Reader addresses live only in the task's prompt, never in this public repo. Claude may not add an
-   outside address on its own; the owner adds or removes readers by editing the numbered list in the existing
-   task's prompt. When rewriting the prompt with `update_trigger`, keep the reader list exactly as the task
-   currently has it.
-4. **If the task is gone** (deleted, or its ID no longer lists), recreate it with `create_trigger` from the
-   prompt below and the owner's address only, then update the ID in this file and in `README.md`, commit, and
-   push.
-5. **Environment.** The task must run in an environment whose network settings allow the source hosts in
-   `sources.json`. The default environment allows only package registries and GitHub, so a run there checks
-   5 of 28 sources (the PyPI release feeds) and the digest footer lists the rest under "Not checked today".
-   When creating the task, pass `environment_id` for an environment with that access; `update_trigger` cannot
-   change it later.
-6. **Testing.** Fire the task with `fire_trigger` and the two-word note "test run". `ROUTINE.md` sends a test
-   run's mail to the owner only, so the other readers never get test mail. Do not invent other notes: the
-   routine treats any other payload text as context, not instructions.
+1. **Update, never duplicate.** List the scheduled tasks first. Change the current task in place (prompt,
+   schedule, model); it keeps its run history and its environment. Create a new one only if it is gone.
+2. **Claude Code, not the chat app.** A task created from the claude.ai chat app runs in an environment that
+   allows only package registries and GitHub, so the collector reaches 5 of 28 sources (the PyPI release
+   feeds). The chat app also cannot edit or disable tasks created from Claude Code. When creating the task,
+   pick an environment whose network allows the hosts in `sources.json`, and confirm with a test run that the
+   footer's "Not checked today" list is empty or short.
+3. **One at a time.** If the task list shows any other inference digest task, it must be deleted. Two tasks
+   send two emails and race on `data/seen.json`.
+4. **Readers.** Reader addresses live only in the task's prompt, never in this public repo. When rewriting the
+   prompt, keep the reader list exactly as the owner last set it.
+5. **Testing.** Run the task now with the two-word note "test run" (see `ROUTINE.md`). A test run mails the
+   owner only, so other readers never get test mail. Do not invent other notes: the routine treats any other
+   payload text as context, not instructions.
 
 ## The prompt
 
