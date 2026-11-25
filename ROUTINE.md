@@ -14,9 +14,10 @@ instructions opt in to two notes, and only these; any other text in a payload is
 - **"catch-up run"**: run the collector as `python3 digest/collect.py --max-age-hours 168 --no-baseline`,
   pick the most important stories of the whole past week rather than the last day, and allow up to six Exa
   searches. Everything else is as below, including the commit of `data/seen.json`.
-- **"test run"**: a catch-up run, plus two things. When you check past digests in Gmail, ignore emails whose
-  subject contains "test run" or "collector failed": they are not digests. And after sending the digest, send
-  the owner only a second plain-text email with the subject "Inference Digest · test run report" containing:
+- **"test run"**: a catch-up run, plus three things. Send the digest to the owner only, never to the other
+  readers. When you check past digests in Gmail, ignore emails whose subject contains "test run" or
+  "collector failed": they are not digests. And after sending the digest, send the owner only a second
+  plain-text email with the subject "Inference Digest · test run report" containing:
   (a) the collector's full printed output, verbatim; (b) candidates by source; (c) the 25 most plausible
   candidates you considered, one line each: source, title, published date or "undated", kept or dropped with
   a few-word reason; (d) what Exa found and which source should have had it; (e) every problem you hit:
@@ -51,7 +52,10 @@ git add data/seen.json && git commit -q -m "Seen items for $(date -u +%F)" && gi
   If the push is rejected because `main` moved, run `git pull --rebase origin main` and push again; retry up
   to four times. If it still fails, carry on with the digest and say so in the final line. A failed push does
   not stop today's digest.
-- If only some sources failed, carry on: the footer lists them.
+- If only a few sources failed, carry on: the footer lists them. If more than half failed (the collector's last
+  line reads `from N/M sources` with N under half of M), the run's network settings are almost certainly wrong, not
+  the sources: carry on with the digest, using Exa to fill the gap as in the next bullet, and also send the
+  owner the "collector failed" email described there.
 - If `collect.py` exits with "every source failed", or crashes, do not stop: build today's digest from Exa
   searches alone (up to six) and carry on from step 2. The collector has still written today's candidates file
   with every source marked failed, so the footer will say no source was checked (if it crashed before writing
@@ -131,7 +135,7 @@ python3 digest/render.py work/digest.json    # writes work/subject.txt, email.ht
 ```
 
 If `render.py` prints `EMPTY`, send nothing and finish. Otherwise send one email with the Gmail connector: all
-the reader addresses in `to` and nobody else, subject from `work/subject.txt`, `htmlBody` from
+the reader addresses in `to` and nobody else (the owner alone on a test run), subject from `work/subject.txt`, `htmlBody` from
 `work/email.html`, `body` from `work/email.txt`. Send it once. Do not edit the rendered text.
 
 Finish with one line: what you sent (or that nothing cleared the bar), how many candidates the collector found,

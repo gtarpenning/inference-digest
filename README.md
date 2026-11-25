@@ -1,6 +1,6 @@
 # inference-digest
 
-A daily inference engineering digest for one reader: serving engines, kernels, speculative decoding, KV-cache
+A daily inference engineering digest for a short list of readers: serving engines, kernels, speculative decoding, KV-cache
 work, quantization, new papers, and the occasional big provider, model or hardware story. It is short on
 purpose: a few items on a good day, nothing on a quiet one. Each item is a one or two sentence summary, a
 word-for-word quote, and a link to the source.
@@ -17,6 +17,20 @@ word-for-word quote, and a link to the source.
    every link is exactly the collected one.
 4. **Send.** `digest/render.py` builds the email and the routine sends it through Gmail. With no items, nothing
    is sent.
+
+## The scheduled task: one, and Claude owns it
+
+Exactly one scheduled task runs this digest: **Inference Digest V3** (`trig_01BpVVpZyUx1WZVEqEHgwzBi`),
+daily at 5:43am Pacific. Claude created it and manages it. `CLAUDE.md` has its full prompt.
+
+- **Never create another one by hand**, not on the claude.ai routines page, not through the HTTP API, not from
+  a script. Claude can only edit or delete scheduled tasks it created itself, so a hand-made task is one
+  Claude cannot fix, and two tasks running at once send two emails and race to push `data/seen.json`.
+- **To change the schedule, the prompt, the model, or anything in this repo, ask Claude.**
+- **One exception: readers.** Claude is not allowed to add an outside email address on its own. To add or
+  remove a reader, edit the numbered reader list inside that same task's prompt at
+  `https://claude.ai/code/routines/trig_01BpVVpZyUx1WZVEqEHgwzBi`. Edit it; never copy or recreate it.
+- Reader addresses live only in the task's prompt, never in this repo: the repo is public.
 
 ## Steering it
 
